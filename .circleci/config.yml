@@ -1,0 +1,117 @@
+## Javascript Node CircleCI 2.0 configuration file
+##
+## Check https://circleci.com/docs/2.0/language-javascript/ for more details
+##
+## PerfPR Backend Deploy Script
+
+version: 2.1
+jobs:
+  test_backend:
+    docker:
+    - image: circleci/node:10.14.1
+      environment:
+        DATABASE_URL: postgresql://root:circleci_test@localhost/circle_test?sslmode=disable
+    - image: circleci/postgres:10.4-ram
+    steps:
+    - checkout
+    - run:
+        name: Wait for DB
+        command: dockerize -wait tcp://localhost:5432 -timeout 30s
+    - restore_cache:
+        key: dependency-cache-{{ checksum "package.json" }}
+    - run:
+        name: Install Node Dependencies
+        command: npm install
+    - save_cache:
+        key: dependency-cache-{{ checksum "package.json" }}
+        paths:
+        - ./node_modules
+    - run:
+        name: Run Backend Tests
+        command: npm test
+  deploy_backend:
+    docker:
+    - image: circleci/python:2.7-jessie
+    steps:
+    - checkout
+    - run:
+        name: Set Vars
+        command: |
+          echo 'export SHORT_HASH=$(echo $CIRCLE_SHA1 | cut -c -7)' >> $BASH_ENV
+          echo 'export BUILD_ZIP=$CIRCLE_PROJECT_REPONAME.$CIRCLE_BRANCH.$SHORT_HASH.zip' >> $BASH_ENV
+          echo 'export VERSION_LABEL=$CIRCLE_BRANCH.$SHORT_HASH.$CIRCLE_BUILD_NUM' >> $BASH_ENV
+          echo 'export S3_BUILDS=perfpr-circleci-builds' >> $BASH_ENV
+    - run:
+        name: Zip Build
+        command: zip -r ${BUILD_ZIP} . -x *.git*
+    - run:
+        name: Install AWSCLI
+        command: sudo pip install awscli
+    - run:
+        name: Upload Build to S3
+        command: aws s3 cp ${BUILD_ZIP} s3://perfpr-circleci-builds
+    - run:
+        name: Create EB Application Version
+        command: |
+          aws elasticbeanstalk create-application-version --application-name ${EB_APPLICATION_NAME} \
+          --version-label ${VERSION_LABEL} \
+          --source-bundle S3Bucket="${S3_BUILDS}",S3Key="${BUILD_ZIP}"
+    - run:
+        name: Deploy to EB Environment
+        command: |
+          aws elasticbeanstalk update-environment --application-name ${EB_APPLICATION_NAME} \
+          --environment-name ${APPLICATION_PREFIX}-${CIRCLE_BRANCH} --version-label ${VERSION_LABEL}
+
+workflows:
+  version: 2.1
+  test-no-deploy:
+    jobs:
+    - test_backend:
+      filters:
+        branches:
+          ignore:
+          - development
+          - staging
+          - live
+  test-deploy-dev:
+    jobs:
+    - test_backend:
+        filters:
+          branches:
+            only:
+            - development
+    - deploy_backend:
+        requires:
+        - test_backend
+  test-deploy-staging:
+    jobs:
+    - test_backend:
+        filters:
+          branches:
+            only:
+            - staging
+    - staging_approval:
+        type: approval
+        requires:
+        - test_backend
+    - deploy_backend:
+        requires:
+        - staging_approval
+  test-deploy-prod:
+    jobs:
+    - test_backend:
+        filters:
+          branches:
+            only:
+            - live
+    - prod_primary_approval:
+        type: approval
+        requires:
+        - test_backend
+    - prod_secondary_approval:
+        type: approval
+        requires:
+        - prod_primary_approval
+    - deploy_backend:
+        requires:
+        - prod_secondary_approval
