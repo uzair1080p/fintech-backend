@@ -1,40 +1,40 @@
 const Sequelize = require('sequelize');
 
-const tableName = 'users';
+const tableName = 'accounts';
 
 const fields = {
   id: {
-    type: Sequelize.UUID,
+    type: Sequelize.STRING,
     primaryKey: true,
-    defaultValue: Sequelize.UUIDV4,
+  },
+  institutionId: {
+    type: Sequelize.STRING,
+    allowNull: false,
   },
   name: {
     type: Sequelize.STRING,
     allowNull: false,
-    validate: {
-      notEmpty: true,
-    },
   },
-  email: {
+  displayName: {
     type: Sequelize.STRING,
     allowNull: false,
-    unique: true,
-    validate: {
-      notEmpty: true,
-      isEmail: true,
-    },
   },
-  password: {
+  last4: {
     type: Sequelize.STRING,
     allowNull: false,
-    validate: {
-      notEmpty: true,
-    },
   },
-  onBoarding: {
-    type: Sequelize.INTEGER,
+  accessToken: {
+    type: Sequelize.STRING,
     allowNull: false,
-    defaultValue: 0,
+  },
+  plaidItemId: {
+    type: Sequelize.STRING,
+    allowNull: false,
+  },
+  publicToken: {
+    type: Sequelize.STRING,
+    allowNull: false,
+    defaultValue: '',
   },
   averageFeePercent: {
     type: Sequelize.INTEGER,
@@ -56,10 +56,32 @@ const fields = {
     allowNull: false,
     defaultValue: '-',
   },
+  numTransactions: {
+    type: Sequelize.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+  },
+  institutionColor: {
+    type: Sequelize.STRING,
+    allowNull: true,
+    defaultValue: null,
+  },
+  institutionLogo: {
+    type: Sequelize.TEXT,
+    allowNull: true,
+    defaultValue: null,
+  },
 };
 
 const relations = {
-
+  userId: {
+    type: Sequelize.UUID,
+    allowNull: false,
+    references: {
+      model: 'users',
+      key: 'id',
+    },
+  },
 };
 
 const timestamps = {

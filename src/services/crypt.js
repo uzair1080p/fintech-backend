@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d|.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,64}$/;
+// const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d|.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,64}$/;
 
 exports.bcrypt = (password) => bcrypt.hashSync(password + SECRET, ROUNDS);
 
@@ -20,4 +20,6 @@ exports.jwtSign = (payload, opts) => jwt.sign(payload, SECRET, opts);
 
 exports.jwtVerify = (token = '') => jwt.verify(token, SECRET);
 
-exports.isValidPassword = (str = '') => PASSWORD_REGEX.test(str);
+exports.jwtDecode = (token) => jwt.decode(token, {complete: true});
+
+// exports.isValidPassword = (str = '') => PASSWORD_REGEX.test(str);

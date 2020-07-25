@@ -33,8 +33,8 @@ describe('API.v1 Tests', function () {
   it('Should login a user', tests.login);
   it('Should refresh the users auth token', tests.refresh);
   it('Should update the user', tests.updateUser);
-  it('Should get a user', tests.getUser);
-  it('Should logout the user and clear any auth cookies', tests.logout);
+  // it('Should create a new account with Plaid', tests.createAccount);
+  // it('Should fail to list transactions', tests.listTransactions);
 
   after(done => {
     DataStore.writeDocumentation();

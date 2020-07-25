@@ -20,8 +20,10 @@ const login = (done) => {
       res.body.should.be.a('object');
       res.body.should.have.property('success').eql(true);
       res.body.should.have.property('data').to.be.a('object');
+      res.headers.should.have.property('x-access-token');
       DataStore.saveRequest('post', 'auth', route, payload);
       DataStore.saveResponse('post', 'auth', route, res.body);
+      DataStore.userToken = res.headers['x-access-token'];
       done();
     });
 };
@@ -31,6 +33,7 @@ const refresh = (done) => {
   const route = `/auth/refresh`;
   agent
     .post(route)
+    .set('authorization', DataStore.userToken)
     .send(payload)
     .end((err, res) => {
       should.not.exist(err);
@@ -38,28 +41,12 @@ const refresh = (done) => {
       res.body.should.be.a('object');
       res.body.should.have.property('success').eql(true);
       res.body.should.have.property('data').to.be.a('object');
+      res.headers.should.have.property('x-access-token');
       DataStore.saveRequest('post', 'auth', route, payload);
       DataStore.saveResponse('post', 'auth', route, res.body);
+      DataStore.userToken = res.headers['x-access-token'];
       done();
     });
 };
 
-const logout = (done) => {
-  const payload = {};
-  const route = `/auth/logout`;
-  agent
-    .post(route)
-    .send(payload)
-    .end((err, res) => {
-      should.not.exist(err);
-      res.should.have.status(200);
-      res.body.should.be.a('object');
-      res.body.should.have.property('success').eql(true);
-      res.body.should.have.property('data').to.be.a('object');
-      DataStore.saveRequest('post', 'auth', route, payload);
-      DataStore.saveResponse('post', 'auth', route, res.body);
-      done();
-    });
-};
-
-module.exports = { login, refresh, logout };
+module.exports = { login, refresh };

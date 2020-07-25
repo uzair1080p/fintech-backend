@@ -1,42 +1,26 @@
 const logger = require('../logger').child(__filename);
 const { User } = require('../models');
-const { isValidPassword } = require('../services/crypt');
-const {} = require('../services/errors');
-
-const getUser = async (req, res, next) => {
-  try {
-    const { userId } = req.params;
-    const user = await User.findByUserId(userId);
-    res.success(user.serialize());
-  } catch (err) {next(err);}
-};
-
-Object.assign(getUser, {
-  description: 'Returns a single record',
-  required: {},
-  optional: {},
-  authenticated: true,
-  returns: 'object',
-});
+const { ValidationError } = require('../services/errors');
+const { login, refresh } = require('./auth');
+const { test } = require('mocha');
 
 const createUser = async (req, res, next) => {
   try {
     const body = req.body;
 
-    if (!isValidPassword(body.password)) {
-      return next(ValidationError.fields({ errors: ['Invalid characters in password'] }));
+    if (body.password && body.password.length < 8) {
+      return next(ValidationError.fields({ errors: ['Password must be at least 8 characters'] }));
     }
 
     const user = await User.createUser(body);
-    res.success(user.serialize());
+    return login(req, res, next);
   } catch (err) {next(err);}
 };
 
 Object.assign(createUser, {
   description: 'Creates a new user',
   required: {
-    firstName: 'string',
-    lastName: 'string',
+    name: 'string',
     email: 'string',
     password: 'string',
   },
@@ -45,26 +29,53 @@ Object.assign(createUser, {
   returns: 'object',
 });
 
+const testUser = async (req, res, next) => {
+  try {
+    const body = req.body;
+
+    if (body.password && body.password.length < 8) {
+      return next(ValidationError.fields({ errors: ['Password must be at least 8 characters'] }));
+    }
+
+
+    return body;
+  } catch (err) {next(err);}
+};
+
 const updateUser = async (req, res, next) => {
   try {
     const { userId } = req.auth;
     const body = req.body;
     const user = await User.findByUserId(userId);
     const updated = await user.updateUser(body);
-    res.success(updated.serialize());
+    return refresh(req, res, next);
   } catch (err) {next(err);}
 };
 
 Object.assign(updateUser, {
-  description: 'Updates a single record',
+  description: 'Updates a user record',
   required: {},
   optional: {
-    firstName: 'string',
-    lastName: 'string',
+    name: 'string',
     email: 'string',
   },
   authenticated: true,
   returns: 'object',
 });
 
-module.exports = { getUser, createUser, updateUser };
+const listUsers = async (req, res, next) => {
+  try {
+    const users = await User.getUserList();
+    res.success(Processor.serialize(processors));
+  } catch (err) {next(err);}
+};
+
+Object.assign(listUsers, {
+  description: 'Returns an array of the users',
+  required: {},
+  optional: {},
+  authenticated: true,
+  returns: 'array',
+});
+
+module.exports = { createUser, updateUser, listUsers, testUser };

@@ -1,6 +1,6 @@
 const Sequelize = require('sequelize');
 
-const tableName = 'users';
+const tableName = 'processors';
 
 const fields = {
   id: {
@@ -11,55 +11,26 @@ const fields = {
   name: {
     type: Sequelize.STRING,
     allowNull: false,
-    validate: {
-      notEmpty: true,
-    },
   },
-  email: {
+  percentFee: {
+    type: Sequelize.INTEGER,
+    allowNull: true,
+  },
+  color: {
     type: Sequelize.STRING,
     allowNull: false,
-    unique: true,
-    validate: {
-      notEmpty: true,
-      isEmail: true,
-    },
-  },
-  password: {
-    type: Sequelize.STRING,
-    allowNull: false,
-    validate: {
-      notEmpty: true,
-    },
-  },
-  onBoarding: {
-    type: Sequelize.INTEGER,
-    allowNull: false,
-    defaultValue: 0,
-  },
-  averageFeePercent: {
-    type: Sequelize.INTEGER,
-    allowNull: false,
-    defaultValue: 0,
-  },
-  totalFees: {
-    type: Sequelize.INTEGER,
-    allowNull: false,
-    defaultValue: 0,
-  },
-  totalIncome: {
-    type: Sequelize.INTEGER,
-    allowNull: false,
-    defaultValue: 0,
-  },
-  rating: {
-    type: Sequelize.STRING,
-    allowNull: false,
-    defaultValue: '-',
   },
 };
 
 const relations = {
-
+  userId: {
+    type: Sequelize.UUID,
+    allowNull: false,
+    references: {
+      model: 'users',
+      key: 'id',
+    },
+  },
 };
 
 const timestamps = {

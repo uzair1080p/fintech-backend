@@ -1,26 +1,33 @@
 const logger = require('../logger').child(__filename);
 const uuid = require('uuid/v4');
-const { UnknownError, BaseError, NotFoundError, ValidationError } = require('../services/errors');
+const { UnknownError, BaseError, NotFoundError, ValidationError, EmailExistsError } = require('../services/errors');
 const ORIGIN_DOMAIN_REGEX = /https?:\/\//g;
 
 exports.responseHandler = (req, res, next) => {
-  const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
   req.requestId = res.requestId = uuid();
   res.success = success;
   res.failure = failure;
   if ((req.headers['host'] || req.headers['origin'] || '').match(ORIGIN_DOMAIN_REGEX)) {
     res.originDomain = res.originDomain.replace(ORIGIN_DOMAIN_REGEX, '');
   }
+  next();
+};
+
+exports.logRequest = (req, res, next) => {
+  const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
   logger.info('request', req.requestId, ip, req.method, req.path);
   logger.debug('requestVerbose', req.requestId, req.headers, req.body);
   next();
 };
 
 exports.errorHandler = (err, req, res, next) => {
+  logger.debug('error debug', err);
   if (err instanceof BaseError) { return res.failure(err);}
   switch (err.name) {
     case 'SequelizeValidationError':
       return res.failure(ValidationError.fields({ errors: err.errors.map(e => e.message) }));
+    case 'SequelizeUniqueConstraintError':
+      return res.failure(EmailExistsError);
   }
   console.error('unhandledError', err); // Intentionally log unhandled errors with console
   res.failure(UnknownError);

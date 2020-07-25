@@ -1,24 +1,21 @@
-const { PORT, ENV, SECRET } = require('./config');
+const { PORT, ENV } = require('./config');
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const cookieParser = require('cookie-parser');
 const helmet = require('helmet');
-const { responseHandler, errorHandler, notFoundHandler } = require('./services/response');
+const { responseHandler, logRequest, errorHandler, notFoundHandler } = require('./services/response');
 const { Database } = require('./services/database');
-const { checkCSRF } = require('./services/middleware');
 const routes = require('./controllers');
 const logger = require('./logger').child(__filename);
 const app = express();
 
 app.disable('x-powered-by');
+app.use(responseHandler);
 app.use(helmet());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(responseHandler);
+app.use(logRequest);
 app.use(cors({origin: true, credentials: true}));
-app.use(cookieParser(SECRET));
-// app.use(checkCSRF);
 app.use(routes);
 app.use(notFoundHandler);
 app.use(errorHandler);

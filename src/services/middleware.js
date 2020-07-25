@@ -1,33 +1,38 @@
 const logger = require('../logger').child(__filename);
 const { ENV } = require('../config');
-const { ForbiddenError, AuthenticationError } = require('./errors');
-const { jwtVerify, hmac, generateBytes } = require('../services/crypt');
+const { User } = require('../models');
+const { AuthenticationError } = require('./errors');
+const { jwtVerify, jwtDecode, hmac } = require('../services/crypt');
+const { validateWebhookToken } = require('./plaid');
 
-exports.checkCSRF = (req, res, next) => {
-  const nextToken = generateBytes(16, 'hex');
-  const shouldCheck = ['post', 'put', 'delete'].indexOf(req.method) !== -1;
-  const skipCheck = ENV === 'development' && /PostmanRuntime/.test(req.headers['user-agent']);
-  const isTokenInvalid = req.headers['x-csrf-token'] !== req.signedCookies['csrfToken'];
-  res.cookie('csrfToken', nextToken, { maxAge: 86400 * 90, httpOnly: false, signed: true });
-  shouldCheck && !skipCheck && isTokenInvalid ? next(ForbiddenError) : next();
+exports.requireAuth = async (req, res, next) => {
+  try {
+    const clientIdent = hmac(req.headers['user-agent']);
+    const token = req.headers['authorization'];
+    if (!token) { return next(AuthenticationError); }
+    req.auth = jwtVerify(token);
+    req.user = await User.findByUserId(req.auth.userId);
+    // const isIdentInvalid = auth.clientIdent !== clientIdent;
+    // if (isIdentInvalid) { return next(AuthenticationError); }
+    next();
+  } catch (err) {
+    next(AuthenticationError);
+  }
 };
 
-exports.requireAuth = (tokenToVerify) => {
-  return (req, res, next) => {
-    try {
-      const clientIdent = hmac(req.headers['user-agent']);
-      const token = req.signedCookies[tokenToVerify];
-      if (!token) { return next(AuthenticationError); }
-
-      const auth = jwtVerify(token);
-      const route = req.method + ' ' + req.path;
-      const isIdentInvalid = auth.clientIdent !== clientIdent;
-      const isRouteInvalid = auth.validRoutes && auth.validRoutes.indexOf(route) === -1;
-      if (isIdentInvalid || isRouteInvalid) { return next(AuthenticationError); }
-      req.auth = auth;
-      next();
-    } catch (err) {
-      next(AuthenticationError);
+exports.validateWebhook = async (req, res, next) => {
+  try {
+    const plaidToken = req.headers['plaid-verification'];
+    const { userId } = req.params;
+    if (!plaidToken || !userId) { return next(AuthenticationError); }
+    const { header } = jwtDecode(plaidToken);
+    if(header.alg !== 'ES256' || !header.kid){
+      return next(AuthenticationError);
     }
-  };
+    const result = await validateWebhookToken(header.kid);
+    req.user = await User.findByUserId(userId);
+    next();
+  } catch (err) {
+    next(AuthenticationError);
+  }
 };

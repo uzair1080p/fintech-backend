@@ -1,65 +1,77 @@
 const Sequelize = require('sequelize');
 
-const tableName = 'users';
+const tableName = 'transactions';
 
 const fields = {
   id: {
-    type: Sequelize.UUID,
+    type: Sequelize.STRING,
     primaryKey: true,
-    defaultValue: Sequelize.UUIDV4,
   },
   name: {
     type: Sequelize.STRING,
     allowNull: false,
-    validate: {
-      notEmpty: true,
-    },
   },
-  email: {
+  date: {
+    type: Sequelize.DATE,
+    allowNull: false,
+  },
+  amount: {
+    type: Sequelize.INTEGER,
+    allowNull: false,
+  },
+  beforeFeeAmount: {
+    type: Sequelize.INTEGER,
+    allowNull: false,
+  },
+  currency: {
     type: Sequelize.STRING,
     allowNull: false,
-    unique: true,
-    validate: {
-      notEmpty: true,
-      isEmail: true,
-    },
   },
-  password: {
+  tags: {
+    type: Sequelize.ARRAY(Sequelize.STRING),
+    allowNull: false,
+    defaultValue: [],
+  },
+  type: {
     type: Sequelize.STRING,
     allowNull: false,
-    validate: {
-      notEmpty: true,
-    },
   },
-  onBoarding: {
-    type: Sequelize.INTEGER,
+  pending: {
+    type: Sequelize.BOOLEAN,
     allowNull: false,
-    defaultValue: 0,
   },
-  averageFeePercent: {
-    type: Sequelize.INTEGER,
+  userSelectedProcessor: {
+    type: Sequelize.BOOLEAN,
     allowNull: false,
-    defaultValue: 0,
-  },
-  totalFees: {
-    type: Sequelize.INTEGER,
-    allowNull: false,
-    defaultValue: 0,
-  },
-  totalIncome: {
-    type: Sequelize.INTEGER,
-    allowNull: false,
-    defaultValue: 0,
-  },
-  rating: {
-    type: Sequelize.STRING,
-    allowNull: false,
-    defaultValue: '-',
+    defaultValue: false,
   },
 };
 
 const relations = {
-
+  userId: {
+    type: Sequelize.UUID,
+    allowNull: false,
+    references: {
+      model: 'users',
+      key: 'id',
+    },
+  },
+  accountId: {
+    type: Sequelize.STRING,
+    allowNull: false,
+    references: {
+      model: 'accounts',
+      key: 'id',
+    },
+  },
+  processorId: {
+    type: Sequelize.UUID,
+    allowNull: true,
+    references: {
+      model: 'processors',
+      key: 'id',
+    },
+  },
 };
 
 const timestamps = {
@@ -72,11 +84,6 @@ const timestamps = {
     type: Sequelize.DATE,
     allowNull: false,
     defaultValue: Sequelize.fn('NOW'),
-  },
-  deletedAt: {
-    type: Sequelize.DATE,
-    allowNull: true,
-    defaultValue: null,
   },
 };
 

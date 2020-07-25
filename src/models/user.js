@@ -9,14 +9,7 @@ const fields = {
     primaryKey: true,
     defaultValue: Sequelize.UUIDV4,
   },
-  firstName: {
-    type: Sequelize.STRING,
-    allowNull: false,
-    validate: {
-      notEmpty: true,
-    },
-  },
-  lastName: {
+  name: {
     type: Sequelize.STRING,
     allowNull: false,
     validate: {
@@ -38,6 +31,31 @@ const fields = {
     validate: {
       notEmpty: true,
     },
+  },
+  onBoarding: {
+    type: Sequelize.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+  },
+  averageFeePercent: {
+    type: Sequelize.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+  },
+  totalFees: {
+    type: Sequelize.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+  },
+  totalIncome: {
+    type: Sequelize.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+  },
+  rating: {
+    type: Sequelize.STRING,
+    allowNull: false,
+    defaultValue: '-',
   },
 };
 
@@ -72,8 +90,8 @@ User.serializerSchema = {
   exclude: ['deletedAt', 'password'],
 };
 
-const ALLOWED_CREATE_FIELDS = ['firstName', 'lastName', 'email'];
-const ALLOWED_UPDATE_FIELDS = ['firstName', 'lastName', 'email'];
+const ALLOWED_CREATE_FIELDS = ['name', 'email'];
+const ALLOWED_UPDATE_FIELDS = ['name', 'email', 'onBoarding'];
 
 User.findByUserId = async function (userId) {
   try {
@@ -85,7 +103,7 @@ User.findByUserId = async function (userId) {
 User.findByEmail = async function (email = '',  rejectOnEmpty = true) {
   try {
     const query = { where: { email: email.toLowerCase() }, rejectOnEmpty };
-    return this.findOne(query);
+    return await this.findOne(query);
   } catch (err) {throw NotFoundError;}
 };
 
@@ -96,6 +114,7 @@ User.getUserList = async function () {
 
 User.createUser = async function (body) {
   const fields = _.pick(body, ALLOWED_CREATE_FIELDS);
+  fields.email = (fields.email || '').toLowerCase();
   fields.password = bcrypt(body.password);
   return this.create(fields);
 };
@@ -103,6 +122,11 @@ User.createUser = async function (body) {
 User.prototype.updateUser = async function (body) {
   const fields = _.pick(body, ALLOWED_UPDATE_FIELDS);
   Object.keys(fields).forEach((v) => this.set(v, fields[v]));
+  return this.save();
+};
+
+User.prototype.updateUserAggregate = async function (body) {
+  Object.keys(body).forEach((v) => this.set(v, body[v]));
   return this.save();
 };
 
